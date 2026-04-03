@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from tabs.chart_helpers import show_no_data_message, style_figure
@@ -18,15 +19,16 @@ DISCOUNT_BAND_ORDER = [
 ]
 
 DISCOUNT_COLORS = [
-    "#F6D7B0",
-    "#F7BE77",
-    "#F49A41",
-    "#EA7D1C",
-    "#D7680B",
-    "#B85400",
+    "#DCEFFC",
+    "#BDDFF8",
+    "#9BC9F2",
+    "#6FAFEA",
+    "#2F7FD1",
+    "#174A8B",
 ]
 
 CHART_WRAPPER_CLASS = "discount-rate-chart"
+BLUE_SCALE = ["#DCEFFC", "#A9D6F5", "#6FAFEA", "#2F7FD1", "#174A8B"]
 
 
 def _build_discount_band(discount_rate: pd.Series) -> pd.Series:
@@ -36,19 +38,32 @@ def _build_discount_band(discount_rate: pd.Series) -> pd.Series:
 
 
 def _prepare_discount_distribution(df: pd.DataFrame) -> pd.DataFrame:
-    # Chuẩn bị dữ liệu cho biểu đồ phân phối lượt mua theo mức giảm giá.
+    # Tóm tắt theo từng band giảm giá để nhìn ngay mức nào kéo được sức mua tốt hơn.
     work_df = df.copy()
     work_df = work_df[(work_df["price"] > 0) & (work_df["historical_sold"] >= 0)].copy()
     work_df["discount_band"] = _build_discount_band(work_df["discount_rate"])
     work_df = work_df.dropna(subset=["discount_band"])
-    work_df["discount_band"] = pd.Categorical(
-        work_df["discount_band"], categories=DISCOUNT_BAND_ORDER, ordered=True
+
+    grouped = (
+        work_df.groupby("discount_band", observed=False)
+        .agg(
+            avg_sold=("historical_sold", "mean"),
+            median_sold=("historical_sold", "median"),
+            total_sold=("historical_sold", "sum"),
+            product_count=("product_id", "count"),
+        )
+        .reset_index()
     )
-    return work_df
+    grouped["discount_band"] = pd.Categorical(grouped["discount_band"], categories=DISCOUNT_BAND_ORDER, ordered=True)
+    grouped = grouped.sort_values("discount_band")
+    grouped["discount_band"] = grouped["discount_band"].astype(str)
+    grouped["avg_sold_label"] = grouped["avg_sold"].map(lambda value: f"{value:,.1f}")
+    grouped["total_sold_label"] = grouped["total_sold"].map(lambda value: f"{value:,.0f}")
+    return grouped
 
 
-def _prepare_category_efficiency(df: pd.DataFrame, top_n: int = 12) -> pd.DataFrame:
-    # Giữ lại các ngành hàng có tổng lượt mua lớn để tránh biểu đồ bị loãng.
+def _prepare_category_efficiency(df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+    # Chỉ giữ các ngành hàng lớn để biểu đồ gọn và dễ đọc hơn.
     work_df = df.copy()
     work_df["category"] = work_df["category"].fillna("Chưa phân loại")
 
@@ -59,20 +74,20 @@ def _prepare_category_efficiency(df: pd.DataFrame, top_n: int = 12) -> pd.DataFr
             avg_sold=("historical_sold", "mean"),
             total_sold=("historical_sold", "sum"),
             product_count=("product_id", "count"),
-            median_price=("price", "median"),
         )
-        .sort_values("total_sold", ascending=False)
+        .sort_values("avg_sold", ascending=False)
         .head(top_n)
         .reset_index(drop=True)
     )
     grouped["avg_discount_label"] = grouped["avg_discount_rate"].map(lambda value: f"{value:.1f}%")
     grouped["avg_sold_label"] = grouped["avg_sold"].map(lambda value: f"{value:,.1f}")
     grouped["total_sold_label"] = grouped["total_sold"].map(lambda value: f"{value:,.0f}")
+    grouped["category"] = grouped["category"].astype(str)
     return grouped
 
 
 def render_tab(df: pd.DataFrame, filters: dict) -> None:
-    # Tab 3 tập trung vào việc giảm giá bao nhiêu là đủ và ngành hàng nào giảm giá hiệu quả hơn.
+    # Tab 3 tập trung vào câu chuyện: giảm giá bao nhiêu là đủ và ngành hàng nào giảm giá hiệu quả hơn.
     inject_shared_tab_styles()
     inject_chart_card_styles(CHART_WRAPPER_CLASS)
 
@@ -87,56 +102,71 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         st.warning("Không có đủ dữ liệu giảm giá để vẽ biểu đồ.")
         return
 
-    discount_distribution_fig = px.box(
-        distribution_df,
-        x="discount_band",
-        y="historical_sold",
-        color="discount_band",
-        category_orders={"discount_band": DISCOUNT_BAND_ORDER},
-        color_discrete_sequence=DISCOUNT_COLORS,
-        title="Lượt mua theo mức giảm giá",
-    )
-    discount_distribution_fig.update_traces(
-        boxmean=True,
-        hovertemplate="Mức giảm giá: %{x}<br>Lượt mua: %{y:,.0f}<extra></extra>",
+    # Dùng go.Bar để khóa cứng thứ tự và nhãn band giảm giá, tránh Plotly tự suy đoán sai trục X.
+    discount_distribution_fig = go.Figure(
+        data=[
+            go.Bar(
+                x=distribution_df["discount_band"].tolist(),
+                y=distribution_df["avg_sold"].tolist(),
+                text=distribution_df["avg_sold_label"].tolist(),
+                textposition="outside",
+                cliponaxis=False,
+                marker=dict(color=DISCOUNT_COLORS[: len(distribution_df)]),
+                customdata=distribution_df[["product_count", "total_sold_label", "median_sold"]].to_numpy(),
+                hovertemplate=(
+                    "Mức giảm giá: %{x}<br>"
+                    "Lượt mua TB/SP: %{y:,.1f}<br>"
+                    "Lượt mua trung vị/SP: %{customdata[2]:,.1f}<br>"
+                    "Tổng lượt mua: %{customdata[1]}<br>"
+                    "Số sản phẩm: %{customdata[0]:,.0f}<extra></extra>"
+                ),
+            )
+        ]
     )
     discount_distribution_fig.update_layout(
-        title=dict(x=0.5, xanchor="center"),
-        xaxis=dict(title=None, automargin=True),
-        yaxis=dict(title="Lượt mua trên mỗi sản phẩm", type="log", automargin=True),
-        margin=dict(t=48, l=30, r=10, b=30),
+        title=dict(text="Lượt mua theo mức giảm giá", x=0.5, xanchor="center"),
+        xaxis=dict(
+            title=None,
+            automargin=True,
+            type="category",
+            categoryorder="array",
+            categoryarray=DISCOUNT_BAND_ORDER,
+        ),
+        yaxis=dict(title="Lượt mua trung bình / sản phẩm", automargin=True),
+        margin=dict(t=48, l=30, r=10, b=36),
         showlegend=False,
     )
     style_figure(discount_distribution_fig, height=370)
     discount_distribution_fig.update_layout(title_font=dict(size=15))
 
-    category_discount_fig = px.scatter(
+    category_discount_fig = px.bar(
         category_df,
-        x="avg_discount_rate",
-        y="avg_sold",
-        size="total_sold",
-        color="median_price",
-        size_max=54,
-        color_continuous_scale=["#FDE6C8", "#F7BE77", "#EA7D1C", "#B85400"],
-        custom_data=["category", "avg_discount_label", "avg_sold_label", "total_sold_label", "product_count"],
-        title="Hiệu quả giảm giá theo ngành hàng",
+        x="avg_sold",
+        y="category",
+        orientation="h",
+        text="avg_sold_label",
+        custom_data=["avg_discount_label", "total_sold_label", "product_count"],
+        color="avg_discount_rate",
+        color_continuous_scale=BLUE_SCALE,
+        title="Ngành hàng giảm giá hiệu quả nhất",
     )
     category_discount_fig.update_traces(
-        marker=dict(line=dict(color="rgba(255,255,255,0.65)", width=1.2), opacity=0.88),
+        textposition="outside",
+        cliponaxis=False,
         hovertemplate=(
-            "<b>%{customdata[0]}</b><br>"
-            "Giảm giá trung bình: %{customdata[1]}<br>"
-            "Lượt mua TB/SP: %{customdata[2]}<br>"
-            "Tổng lượt mua: %{customdata[3]}<br>"
-            "Số sản phẩm: %{customdata[4]:,.0f}<extra></extra>"
+            "<b>%{y}</b><br>"
+            "Lượt mua TB/SP: %{x:,.1f}<br>"
+            "Giảm giá trung bình: %{customdata[0]}<br>"
+            "Tổng lượt mua: %{customdata[1]}<br>"
+            "Số sản phẩm: %{customdata[2]:,.0f}<extra></extra>"
         ),
     )
     category_discount_fig.update_layout(
         title=dict(x=0.5, xanchor="center"),
-        xaxis=dict(title="Giảm giá trung bình (%)", automargin=True),
-        yaxis=dict(title="Lượt mua trung bình / sản phẩm", automargin=True),
-        margin=dict(t=48, l=28, r=18, b=28),
-        coloraxis_colorbar=dict(title="Giá trung vị"),
+        xaxis=dict(title="Lượt mua trung bình / sản phẩm", automargin=True),
+        yaxis=dict(title=None, automargin=True, categoryorder="total ascending"),
+        margin=dict(t=48, l=10, r=22, b=28),
+        coloraxis_colorbar=dict(title="Giảm giá TB (%)"),
     )
     style_figure(category_discount_fig, height=370)
     category_discount_fig.update_layout(title_font=dict(size=15))

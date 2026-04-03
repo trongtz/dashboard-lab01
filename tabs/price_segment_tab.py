@@ -29,6 +29,7 @@ DISCOUNT_BAND_ORDER = [
 ]
 
 CHART_WRAPPER_CLASS = "price-segment-chart"
+BLUE_SCALE = ["#DCEFFC", "#A9D6F5", "#6FAFEA", "#2F7FD1", "#174A8B"]
 
 
 def _build_price_segment(price: pd.Series) -> pd.Series:
@@ -114,6 +115,15 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
     segment_summary["bar_color"] = np.where(
         segment_summary["is_best_segment"], "Phân khúc vàng", "Phân khúc còn lại"
     )
+    price_segment_ticktext = [
+        "Dưới 100K",
+        "100K - 300K",
+        "300K - 700K",
+        "700K - 2 triệu",
+        "2 - 5 triệu",
+        "5 - 20 triệu",
+        "Trên 20<br>triệu",
+    ]
 
     sales_fig = px.bar(
         segment_summary,
@@ -121,8 +131,8 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         y="total_sold",
         color="bar_color",
         color_discrete_map={
-            "Phân khúc vàng": "#D96B0B",
-            "Phân khúc còn lại": "#F7B267",
+            "Phân khúc vàng": BLUE_SCALE[4],
+            "Phân khúc còn lại": BLUE_SCALE[2],
         },
         text="total_sold_label",
         custom_data=["product_count", "avg_sold_label"],
@@ -141,14 +151,21 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
     )
     sales_fig.update_layout(
         title=dict(text="Lượt mua theo phân khúc giá", x=0.5, xanchor="center"),
-        xaxis=dict(title=None, automargin=True),
+        xaxis=dict(
+            title=None,
+            automargin=True,
+            tickangle=-14,
+            tickfont=dict(size=11),
+            tickmode="array",
+            tickvals=segment_summary["price_segment"].tolist(),
+            ticktext=price_segment_ticktext,
+        ),
         yaxis=dict(title="Tổng lượt mua", automargin=True),
-        margin=dict(t=48, l=26, r=18, b=34),
+        margin=dict(t=48, l=26, r=44, b=56),
         showlegend=False,
     )
     style_figure(sales_fig, height=370)
     sales_fig.update_layout(title_font=dict(size=15))
-    sales_fig.update_xaxes(tickangle=-24)
 
     discount_fig = px.density_heatmap(
         heatmap_df,
@@ -157,7 +174,7 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         z="avg_sold",
         histfunc="avg",
         text_auto=".0f",
-        color_continuous_scale=["#FFF2E0", "#F7C27B", "#FF8A1D", "#CC5A00"],
+        color_continuous_scale=BLUE_SCALE,
         title="Giảm giá theo phân khúc",
     )
     discount_fig.update_traces(customdata=heatmap_df[["product_count", "median_sold", "avg_sold_label"]].to_numpy())

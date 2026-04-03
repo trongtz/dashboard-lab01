@@ -10,12 +10,12 @@ from tabs.product_category_tab import render_tab as render_product_category_tab
 
 st.set_page_config(page_title="Bảng điều khiển phân tích Tiki", page_icon="📊", layout="wide")
 
-COLOR_PRIMARY = "#FF6A00"
-COLOR_SECONDARY = "#1A5F7A"
-COLOR_ACCENT = "#FFB347"
-BG_GRADIENT = "linear-gradient(180deg, #FFF1E2 0%, #FFD8B0 46%, #FFB36B 100%)"
-CARD_BG = "rgba(255, 249, 242, 0.9)"
-CARD_BORDER = "rgba(255, 106, 0, 0.2)"
+COLOR_PRIMARY = "#2F7FD1"
+COLOR_SECONDARY = "#174A8B"
+COLOR_ACCENT = "#6FAFEA"
+BG_GRADIENT = "linear-gradient(180deg, #D6ECFF 0%, #B9DCFA 46%, #9ECAF2 100%)"
+CARD_BG = "rgba(238, 247, 255, 0.92)"
+CARD_BORDER = "rgba(47, 127, 209, 0.18)"
 TEXT_MAIN = "#16324F"
 TEXT_DIM = "#5F6F81"
 
@@ -73,9 +73,9 @@ def inject_styles() -> None:
             }}
 
             @keyframes emberGlow {{
-                0% {{ box-shadow: 0 0 0 rgba(255, 106, 0, 0), 0 12px 24px rgba(217, 126, 34, 0.14); }}
-                50% {{ box-shadow: 0 0 26px rgba(255, 106, 0, 0.20), 0 18px 34px rgba(255, 106, 0, 0.18); }}
-                100% {{ box-shadow: 0 0 0 rgba(255, 106, 0, 0), 0 12px 24px rgba(217, 126, 34, 0.14); }}
+                0% {{ box-shadow: 0 0 0 rgba(47, 127, 209, 0), 0 12px 24px rgba(47, 127, 209, 0.10); }}
+                50% {{ box-shadow: 0 0 26px rgba(47, 127, 209, 0.16), 0 18px 34px rgba(47, 127, 209, 0.12); }}
+                100% {{ box-shadow: 0 0 0 rgba(47, 127, 209, 0), 0 12px 24px rgba(47, 127, 209, 0.10); }}
             }}
 
             :root {{
@@ -118,18 +118,18 @@ def inject_styles() -> None:
                 max-width: 1260px;
                 margin: 0 auto;
                 padding: 0.02rem 1rem 0.45rem;
-                background: linear-gradient(180deg, rgba(255, 247, 238, 0.97), rgba(255, 228, 196, 0.97));
+                background: linear-gradient(180deg, rgba(232, 243, 252, 0.97), rgba(210, 230, 247, 0.97));
                 background-size: 160% 160%;
                 border-radius: 20px;
-                border: 1px solid rgba(255, 106, 0, 0.16);
-                box-shadow: 0 24px 54px rgba(217, 126, 34, 0.22);
+                border: 1px solid rgba(47, 127, 209, 0.14);
+                box-shadow: 0 24px 54px rgba(47, 127, 209, 0.14);
                 animation: tikiGlowShift 14s ease-in-out infinite, emberGlow 10s ease-in-out infinite;
             }}
 
             .title-chip {{
-                background: linear-gradient(135deg, #fffdf9, #ffe8d0);
+                background: linear-gradient(135deg, #fafdff, #deefff);
                 background-size: 160% 160%;
-                border: 1px solid rgba(255, 106, 0, 0.22);
+                border: 1px solid rgba(47, 127, 209, 0.18);
                 border-radius: 14px;
                 padding: 0.04rem 0.72rem;
                 min-height: 2.1rem;
@@ -139,7 +139,7 @@ def inject_styles() -> None:
                 font-weight: 700;
                 color: #15324a;
                 letter-spacing: 0.01em;
-                box-shadow: 0 10px 18px rgba(217, 126, 34, 0.12);
+                box-shadow: 0 10px 18px rgba(47, 127, 209, 0.10);
                 animation: tikiGlowShift 10s ease-in-out infinite, emberGlow 8s ease-in-out infinite;
             }}
 
@@ -155,9 +155,9 @@ def inject_styles() -> None:
 
             .stTabs [data-baseweb="tab"] {{
                 border-radius: 14px;
-                background: rgba(255, 250, 244, 0.9);
+                background: rgba(247, 251, 255, 0.92);
                 color: #385069;
-                border: 1px solid rgba(255, 106, 0, 0.18);
+                border: 1px solid rgba(47, 127, 209, 0.16);
                 padding: 0.04rem 0.62rem;
                 min-height: 2.05rem;
                 font-size: 0.8rem;
@@ -165,10 +165,10 @@ def inject_styles() -> None:
             }}
 
             .stTabs [aria-selected="true"] {{
-                background: linear-gradient(120deg, #ff8a1d, #ff6a00);
-                border: 1px solid rgba(255, 106, 0, 0.28);
+                background: linear-gradient(120deg, #6FAFEA, #2F7FD1);
+                border: 1px solid rgba(47, 127, 209, 0.24);
                 color: #fff !important;
-                box-shadow: 0 10px 20px rgba(255, 106, 0, 0.24);
+                box-shadow: 0 10px 20px rgba(47, 127, 209, 0.18);
             }}
 
             .stTabs [data-baseweb="tab-panel"] {{
@@ -178,16 +178,14 @@ def inject_styles() -> None:
                 margin-top: -0.6rem;
             }}
 
-            .stSelectbox label,
-            .stCheckbox label,
-            .stRadio label {{
+            .stCheckbox label {{
                 color: #16324F !important;
             }}
 
             div[data-testid="stPopover"] button {{
                 min-height: 2.1rem;
-                background: rgba(255, 248, 240, 0.96);
-                border: 1px solid rgba(255, 106, 0, 0.22);
+                background: rgba(247, 251, 255, 0.96);
+                border: 1px solid rgba(47, 127, 209, 0.18);
                 border-radius: 12px;
                 color: #16324F;
                 width: 100%;
@@ -207,17 +205,6 @@ def inject_styles() -> None:
                 overflow-y: auto;
                 padding-right: 0.15rem;
                 margin-top: 0.2rem;
-            }}
-
-            div[data-testid="stRadio"] > div {{
-                gap: 0.35rem;
-            }}
-
-            div[data-testid="stRadio"] label {{
-                border: 1px solid rgba(255, 106, 0, 0.16);
-                border-radius: 10px;
-                padding: 0.45rem 0.6rem;
-                background: rgba(255, 248, 240, 0.72);
             }}
 
             .stPlotlyChart {{
@@ -240,25 +227,14 @@ def inject_styles() -> None:
     )
 
 
-def get_sort_options() -> dict[str, tuple[str, bool]]:
-    return {
-        "Bán chạy nhất": ("historical_sold", False),
-        "Giá tăng dần": ("price", True),
-        "Giá giảm dần": ("price", False),
-        "Đánh giá cao": ("rating", False),
-    }
-
-
-def filter_data(df: pd.DataFrame, selected_categories: list[str], sort_label: str) -> pd.DataFrame:
+def filter_data(df: pd.DataFrame, selected_categories: list[str]) -> pd.DataFrame:
     # Bộ lọc danh mục chỉ áp vào tab 2 và 3; tab 1 vẫn cần dữ liệu gốc để tính "Khác" cho đúng.
     filtered = df.copy()
     if selected_categories:
         filtered = filtered[filtered["category"].isin(selected_categories)]
     else:
         filtered = filtered.iloc[0:0]
-
-    sort_col, ascending = get_sort_options()[sort_label]
-    return filtered.sort_values(by=sort_col, ascending=ascending)
+    return filtered
 
 
 def _build_category_selector(categories: list[str]) -> list[str]:
@@ -291,27 +267,10 @@ def _build_category_selector(categories: list[str]) -> list[str]:
     return [category for category in categories if st.session_state.get(f"category_filter_{category}", True)]
 
 
-def _build_sort_selector(sort_labels: list[str]) -> str:
-    # Bộ chọn sắp xếp dùng popover để tiết kiệm diện tích hàng top bar.
-    if "selected_sort_label" not in st.session_state or st.session_state["selected_sort_label"] not in sort_labels:
-        st.session_state["selected_sort_label"] = sort_labels[0]
-
-    with st.popover("Sắp xếp", use_container_width=True):
-        selected_sort = st.radio(
-            "Chọn cách sắp xếp",
-            options=sort_labels,
-            index=sort_labels.index(st.session_state["selected_sort_label"]),
-            label_visibility="collapsed",
-        )
-        st.session_state["selected_sort_label"] = selected_sort
-
-    return st.session_state["selected_sort_label"]
-
-
-def render_top_bar(df: pd.DataFrame) -> tuple[list[str], str]:
-    # Top bar giữ title bên trái và hai bộ lọc gọn về bên phải.
+def render_top_bar(df: pd.DataFrame) -> list[str]:
+    # Top bar giữ title bên trái và bộ lọc danh mục gọn về bên phải.
     st.markdown('<div class="toolbar-row">', unsafe_allow_html=True)
-    left_col, spacer_col, cat_col, sort_col = st.columns([4.5, 3.0, 1.25, 1.25], gap="small")
+    left_col, spacer_col, cat_col = st.columns([5.2, 4.0, 1.4], gap="small")
 
     with left_col:
         st.markdown('<div class="title-chip">Phân tích xu hướng mua hàng TIKI</div>', unsafe_allow_html=True)
@@ -320,30 +279,24 @@ def render_top_bar(df: pd.DataFrame) -> tuple[list[str], str]:
         st.markdown("")
 
     categories = sorted(df["category"].dropna().unique().tolist())
-    sort_labels = list(get_sort_options().keys())
-
     with cat_col:
         selected_categories = _build_category_selector(categories)
 
-    with sort_col:
-        selected_sort = _build_sort_selector(sort_labels)
-
     st.markdown('</div>', unsafe_allow_html=True)
-    return selected_categories, selected_sort
+    return selected_categories
 
 
 def main() -> None:
     inject_styles()
     df = load_data()
 
-    selected_categories, selected_sort = render_top_bar(df)
+    selected_categories = render_top_bar(df)
 
     with st.spinner("Đang cập nhật bảng điều khiển..."):
-        filtered_df = filter_data(df, selected_categories, selected_sort)
+        filtered_df = filter_data(df, selected_categories)
 
     filters = {
         "category": selected_categories,
-        "sort": selected_sort,
         "primary_color": COLOR_PRIMARY,
         "secondary_color": COLOR_SECONDARY,
         "accent_color": COLOR_ACCENT,

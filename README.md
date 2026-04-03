@@ -139,16 +139,9 @@ Tab này cho biết:
 ---
 
 ## ⚙️ Bộ lọc và tương tác
-Dashboard hiện có 2 điều khiển chính ở phần trên:
+Dashboard hiện có bộ lọc chính ở phần trên:
 - **Danh mục**  
   Cho phép tick/bỏ tick từng danh mục muốn xem.
-
-- **Sắp xếp**  
-  Cho phép sắp dữ liệu theo:
-  - bán chạy nhất,
-  - giá tăng dần,
-  - giá giảm dần,
-  - đánh giá cao.
 
 Toàn bộ biểu đồ đều là **biểu đồ tương tác**, hỗ trợ hover để xem chi tiết dữ liệu.
 
