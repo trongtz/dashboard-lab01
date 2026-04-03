@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from tabs.common import inject_tab_styles, show_no_data_message, style_figure
+from tabs.chart_helpers import show_no_data_message, style_figure
+from tabs.styles import inject_chart_card_styles, inject_shared_tab_styles
 
 
 DISCOUNT_BAND_ORDER = [
@@ -26,13 +26,17 @@ DISCOUNT_COLORS = [
     "#B85400",
 ]
 
+CHART_WRAPPER_CLASS = "discount-rate-chart"
+
 
 def _build_discount_band(discount_rate: pd.Series) -> pd.Series:
-    bins = [-0.1, 0, 10, 20, 30, 40, np.inf]
+    # Gom tỷ lệ giảm giá thành các band để so sánh dễ hơn thay vì nhìn từng giá trị rời rạc.
+    bins = [-0.1, 0, 10, 20, 30, 40, float("inf")]
     return pd.cut(discount_rate.fillna(0), bins=bins, labels=DISCOUNT_BAND_ORDER)
 
 
 def _prepare_discount_distribution(df: pd.DataFrame) -> pd.DataFrame:
+    # Chuẩn bị dữ liệu cho biểu đồ phân phối lượt mua theo mức giảm giá.
     work_df = df.copy()
     work_df = work_df[(work_df["price"] > 0) & (work_df["historical_sold"] >= 0)].copy()
     work_df["discount_band"] = _build_discount_band(work_df["discount_rate"])
@@ -44,6 +48,7 @@ def _prepare_discount_distribution(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _prepare_category_efficiency(df: pd.DataFrame, top_n: int = 12) -> pd.DataFrame:
+    # Giữ lại các ngành hàng có tổng lượt mua lớn để tránh biểu đồ bị loãng.
     work_df = df.copy()
     work_df["category"] = work_df["category"].fillna("Chưa phân loại")
 
@@ -67,7 +72,9 @@ def _prepare_category_efficiency(df: pd.DataFrame, top_n: int = 12) -> pd.DataFr
 
 
 def render_tab(df: pd.DataFrame, filters: dict) -> None:
-    inject_tab_styles()
+    # Tab 3 tập trung vào việc giảm giá bao nhiêu là đủ và ngành hàng nào giảm giá hiệu quả hơn.
+    inject_shared_tab_styles()
+    inject_chart_card_styles(CHART_WRAPPER_CLASS)
 
     if df.empty:
         show_no_data_message("Tỉ lệ giảm giá")
@@ -80,24 +87,7 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         st.warning("Không có đủ dữ liệu giảm giá để vẽ biểu đồ.")
         return
 
-    st.markdown(
-        """
-        <style>
-            .discount-chart {
-                position: relative;
-                overflow: hidden;
-                border-radius: 22px;
-            }
-            .discount-chart .stPlotlyChart {
-                border: 1px solid rgba(255, 140, 0, 0.14) !important;
-                box-shadow: 0 12px 22px rgba(0, 0, 0, 0.12);
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    violin_fig = px.box(
+    discount_distribution_fig = px.box(
         distribution_df,
         x="discount_band",
         y="historical_sold",
@@ -106,24 +96,21 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         color_discrete_sequence=DISCOUNT_COLORS,
         title="Lượt mua theo mức giảm giá",
     )
-    violin_fig.update_traces(
+    discount_distribution_fig.update_traces(
         boxmean=True,
-        hovertemplate=(
-            "Mức giảm giá: %{x}<br>"
-            "Lượt mua: %{y:,.0f}<extra></extra>"
-        ),
+        hovertemplate="Mức giảm giá: %{x}<br>Lượt mua: %{y:,.0f}<extra></extra>",
     )
-    violin_fig.update_layout(
+    discount_distribution_fig.update_layout(
         title=dict(x=0.5, xanchor="center"),
         xaxis=dict(title=None, automargin=True),
         yaxis=dict(title="Lượt mua trên mỗi sản phẩm", type="log", automargin=True),
         margin=dict(t=48, l=30, r=10, b=30),
         showlegend=False,
     )
-    style_figure(violin_fig, height=330)
-    violin_fig.update_layout(title_font=dict(size=15))
+    style_figure(discount_distribution_fig, height=370)
+    discount_distribution_fig.update_layout(title_font=dict(size=15))
 
-    scatter_fig = px.scatter(
+    category_discount_fig = px.scatter(
         category_df,
         x="avg_discount_rate",
         y="avg_sold",
@@ -134,7 +121,7 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         custom_data=["category", "avg_discount_label", "avg_sold_label", "total_sold_label", "product_count"],
         title="Hiệu quả giảm giá theo ngành hàng",
     )
-    scatter_fig.update_traces(
+    category_discount_fig.update_traces(
         marker=dict(line=dict(color="rgba(255,255,255,0.65)", width=1.2), opacity=0.88),
         hovertemplate=(
             "<b>%{customdata[0]}</b><br>"
@@ -144,24 +131,32 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
             "Số sản phẩm: %{customdata[4]:,.0f}<extra></extra>"
         ),
     )
-    scatter_fig.update_layout(
+    category_discount_fig.update_layout(
         title=dict(x=0.5, xanchor="center"),
         xaxis=dict(title="Giảm giá trung bình (%)", automargin=True),
         yaxis=dict(title="Lượt mua trung bình / sản phẩm", automargin=True),
         margin=dict(t=48, l=28, r=18, b=28),
         coloraxis_colorbar=dict(title="Giá trung vị"),
     )
-    style_figure(scatter_fig, height=330)
-    scatter_fig.update_layout(title_font=dict(size=15))
+    style_figure(category_discount_fig, height=370)
+    category_discount_fig.update_layout(title_font=dict(size=15))
 
     left_col, right_col = st.columns(2, gap="small")
 
     with left_col:
-        st.markdown("<div class='discount-chart'>", unsafe_allow_html=True)
-        st.plotly_chart(violin_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+        st.markdown(f"<div class='{CHART_WRAPPER_CLASS}'>", unsafe_allow_html=True)
+        st.plotly_chart(
+            discount_distribution_fig,
+            use_container_width=True,
+            config={"displayModeBar": False, "responsive": True},
+        )
         st.markdown("</div>", unsafe_allow_html=True)
 
     with right_col:
-        st.markdown("<div class='discount-chart'>", unsafe_allow_html=True)
-        st.plotly_chart(scatter_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+        st.markdown(f"<div class='{CHART_WRAPPER_CLASS}'>", unsafe_allow_html=True)
+        st.plotly_chart(
+            category_discount_fig,
+            use_container_width=True,
+            config={"displayModeBar": False, "responsive": True},
+        )
         st.markdown("</div>", unsafe_allow_html=True)

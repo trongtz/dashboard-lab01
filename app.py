@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from tabs.deep_analysis import render_tab as render_deep_analysis_tab
-from tabs.insights import render_tab as render_insights_tab
-from tabs.overview import render_tab as render_overview_tab
+from tabs.discount_rate_tab import render_tab as render_discount_rate_tab
+from tabs.price_segment_tab import render_tab as render_price_segment_tab
+from tabs.product_category_tab import render_tab as render_product_category_tab
 
 st.set_page_config(page_title="Bảng điều khiển phân tích Tiki", page_icon="📊", layout="wide")
 
@@ -22,6 +22,7 @@ TEXT_DIM = "#5F6F81"
 
 @st.cache_data
 def load_data(path: str = "data.csv") -> pd.DataFrame:
+    # Chuẩn hóa tên cột từ file gốc để các tab chỉ làm việc với một schema thống nhất.
     rename_map = {
         "id": "product_id",
         "brand_name": "brand",
@@ -116,7 +117,7 @@ def inject_styles() -> None:
             .block-container {{
                 max-width: 1260px;
                 margin: 0 auto;
-                padding: 0.3rem 1.1rem 0.65rem;
+                padding: 0.02rem 1rem 0.45rem;
                 background: linear-gradient(180deg, rgba(255, 247, 238, 0.97), rgba(255, 228, 196, 0.97));
                 background-size: 160% 160%;
                 border-radius: 20px;
@@ -130,11 +131,11 @@ def inject_styles() -> None:
                 background-size: 160% 160%;
                 border: 1px solid rgba(255, 106, 0, 0.22);
                 border-radius: 14px;
-                padding: 0.2rem 0.95rem;
-                min-height: 2.95rem;
+                padding: 0.04rem 0.72rem;
+                min-height: 2.1rem;
                 display: inline-flex;
                 align-items: center;
-                font-size: 1.15rem;
+                font-size: 0.95rem;
                 font-weight: 700;
                 color: #15324a;
                 letter-spacing: 0.01em;
@@ -143,12 +144,12 @@ def inject_styles() -> None:
             }}
 
             .toolbar-row {{
-                margin-bottom: -0.2rem;
+                margin-bottom: -0.68rem;
             }}
 
             .stTabs [data-baseweb="tab-list"] {{
                 gap: 0.35rem;
-                margin-top: -0.15rem;
+                margin-top: -0.5rem;
                 margin-bottom: 0;
             }}
 
@@ -157,8 +158,9 @@ def inject_styles() -> None:
                 background: rgba(255, 250, 244, 0.9);
                 color: #385069;
                 border: 1px solid rgba(255, 106, 0, 0.18);
-                padding: 0.22rem 0.75rem;
-                font-size: 0.9rem;
+                padding: 0.04rem 0.62rem;
+                min-height: 2.05rem;
+                font-size: 0.8rem;
                 font-weight: 600;
             }}
 
@@ -170,10 +172,10 @@ def inject_styles() -> None:
             }}
 
             .stTabs [data-baseweb="tab-panel"] {{
-                height: calc(100vh - 5.6rem);
+                height: calc(100vh - 4.8rem);
                 overflow-y: auto;
                 padding-top: 0 !important;
-                margin-top: -0.35rem;
+                margin-top: -0.6rem;
             }}
 
             .stSelectbox label,
@@ -183,7 +185,7 @@ def inject_styles() -> None:
             }}
 
             div[data-testid="stPopover"] button {{
-                min-height: 2.95rem;
+                min-height: 2.1rem;
                 background: rgba(255, 248, 240, 0.96);
                 border: 1px solid rgba(255, 106, 0, 0.22);
                 border-radius: 12px;
@@ -191,8 +193,8 @@ def inject_styles() -> None:
                 width: 100%;
                 min-width: 0;
                 justify-content: space-between;
-                padding-inline: 0.9rem;
-                font-size: 0.98rem;
+                padding-inline: 0.72rem;
+                font-size: 0.84rem;
                 font-weight: 600;
             }}
 
@@ -248,6 +250,7 @@ def get_sort_options() -> dict[str, tuple[str, bool]]:
 
 
 def filter_data(df: pd.DataFrame, selected_categories: list[str], sort_label: str) -> pd.DataFrame:
+    # Bộ lọc danh mục chỉ áp vào tab 2 và 3; tab 1 vẫn cần dữ liệu gốc để tính "Khác" cho đúng.
     filtered = df.copy()
     if selected_categories:
         filtered = filtered[filtered["category"].isin(selected_categories)]
@@ -259,6 +262,7 @@ def filter_data(df: pd.DataFrame, selected_categories: list[str], sort_label: st
 
 
 def _build_category_selector(categories: list[str]) -> list[str]:
+    # Lưu trạng thái checkbox theo session để người dùng đổi tab vẫn không mất lựa chọn.
     for category in categories:
         key = f"category_filter_{category}"
         if key not in st.session_state:
@@ -288,6 +292,7 @@ def _build_category_selector(categories: list[str]) -> list[str]:
 
 
 def _build_sort_selector(sort_labels: list[str]) -> str:
+    # Bộ chọn sắp xếp dùng popover để tiết kiệm diện tích hàng top bar.
     if "selected_sort_label" not in st.session_state or st.session_state["selected_sort_label"] not in sort_labels:
         st.session_state["selected_sort_label"] = sort_labels[0]
 
@@ -304,6 +309,7 @@ def _build_sort_selector(sort_labels: list[str]) -> str:
 
 
 def render_top_bar(df: pd.DataFrame) -> tuple[list[str], str]:
+    # Top bar giữ title bên trái và hai bộ lọc gọn về bên phải.
     st.markdown('<div class="toolbar-row">', unsafe_allow_html=True)
     left_col, spacer_col, cat_col, sort_col = st.columns([4.5, 3.0, 1.25, 1.25], gap="small")
 
@@ -357,13 +363,13 @@ def main() -> None:
         return
 
     with tab_overview:
-        render_overview_tab(df, filters)
+        render_product_category_tab(df, filters)
 
     with tab_deep:
-        render_deep_analysis_tab(filtered_df, filters)
+        render_price_segment_tab(filtered_df, filters)
 
     with tab_insights:
-        render_insights_tab(filtered_df, filters)
+        render_discount_rate_tab(filtered_df, filters)
 
 
 if __name__ == "__main__":

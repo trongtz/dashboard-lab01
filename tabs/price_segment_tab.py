@@ -5,7 +5,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from tabs.common import inject_tab_styles, show_no_data_message, style_figure
+from tabs.chart_helpers import show_no_data_message, style_figure
+from tabs.styles import inject_chart_card_styles, inject_shared_tab_styles
 
 
 PRICE_SEGMENT_ORDER = [
@@ -27,8 +28,11 @@ DISCOUNT_BAND_ORDER = [
     "Trên 40%",
 ]
 
+CHART_WRAPPER_CLASS = "price-segment-chart"
+
 
 def _build_price_segment(price: pd.Series) -> pd.Series:
+    # Chia giá thành các ngưỡng dễ đọc để phân tích hành vi mua theo phân khúc.
     bins = [-1, 100_000, 300_000, 700_000, 2_000_000, 5_000_000, 20_000_000, np.inf]
     return pd.cut(price, bins=bins, labels=PRICE_SEGMENT_ORDER)
 
@@ -39,6 +43,7 @@ def _build_discount_band(discount_rate: pd.Series) -> pd.Series:
 
 
 def _prepare_segment_summary(df: pd.DataFrame) -> pd.DataFrame:
+    # Tóm tắt quy mô từng phân khúc giá: số sản phẩm, tổng lượt mua và sức mua trung bình.
     work_df = df.copy()
     work_df["price_segment"] = _build_price_segment(work_df["price"])
 
@@ -62,6 +67,7 @@ def _prepare_segment_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _prepare_discount_heatmap(df: pd.DataFrame) -> pd.DataFrame:
+    # Tạo ma trận để xem cùng một mức giảm giá tác động khác nhau ra sao ở từng phân khúc giá.
     work_df = df.copy()
     work_df["price_segment"] = _build_price_segment(work_df["price"])
     work_df["discount_band"] = _build_discount_band(work_df["discount_rate"])
@@ -88,7 +94,9 @@ def _prepare_discount_heatmap(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def render_tab(df: pd.DataFrame, filters: dict) -> None:
-    inject_tab_styles()
+    # Tab 2 trả lời 2 ý chính: phân khúc giá "vàng" và độ nhạy khuyến mãi theo từng mức giá.
+    inject_shared_tab_styles()
+    inject_chart_card_styles(CHART_WRAPPER_CLASS)
 
     if df.empty:
         show_no_data_message("Phân khúc giá bán")
@@ -102,30 +110,12 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         return
 
     best_segment = segment_summary.sort_values(["gold_score", "total_sold"], ascending=False).iloc[0]
-
-    st.markdown(
-        """
-        <style>
-            .deep-chart {
-                position: relative;
-                overflow: hidden;
-                border-radius: 22px;
-            }
-            .deep-chart .stPlotlyChart {
-                border: 1px solid rgba(255, 140, 0, 0.14) !important;
-                box-shadow: 0 12px 22px rgba(0, 0, 0, 0.12);
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
     segment_summary["is_best_segment"] = segment_summary["price_segment"] == best_segment["price_segment"]
     segment_summary["bar_color"] = np.where(
         segment_summary["is_best_segment"], "Phân khúc vàng", "Phân khúc còn lại"
     )
 
-    bubble_fig = px.bar(
+    sales_fig = px.bar(
         segment_summary,
         x="price_segment",
         y="total_sold",
@@ -136,9 +126,9 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         },
         text="total_sold_label",
         custom_data=["product_count", "avg_sold_label"],
-        title="Phân khúc giá vàng: nơi sản phẩm tập trung và sức mua bùng nổ",
+        title="Lượt mua theo phân khúc giá",
     )
-    bubble_fig.update_traces(
+    sales_fig.update_traces(
         textposition="outside",
         cliponaxis=False,
         marker_line_width=0,
@@ -149,18 +139,18 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
             "Lượt mua trung bình/SP: %{customdata[1]}<extra></extra>"
         ),
     )
-    bubble_fig.update_layout(
+    sales_fig.update_layout(
         title=dict(text="Lượt mua theo phân khúc giá", x=0.5, xanchor="center"),
         xaxis=dict(title=None, automargin=True),
         yaxis=dict(title="Tổng lượt mua", automargin=True),
         margin=dict(t=48, l=26, r=18, b=34),
         showlegend=False,
     )
-    style_figure(bubble_fig, height=330)
-    bubble_fig.update_layout(title_font=dict(size=15))
-    bubble_fig.update_xaxes(tickangle=-24)
+    style_figure(sales_fig, height=370)
+    sales_fig.update_layout(title_font=dict(size=15))
+    sales_fig.update_xaxes(tickangle=-24)
 
-    heatmap_fig = px.density_heatmap(
+    discount_fig = px.density_heatmap(
         heatmap_df,
         x="price_segment",
         y="discount_band",
@@ -168,12 +158,10 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
         histfunc="avg",
         text_auto=".0f",
         color_continuous_scale=["#FFF2E0", "#F7C27B", "#FF8A1D", "#CC5A00"],
-        title="Độ nhạy khuyến mãi theo từng phân khúc giá",
+        title="Giảm giá theo phân khúc",
     )
-    heatmap_fig.update_traces(
-        customdata=heatmap_df[["product_count", "median_sold", "avg_sold_label"]].to_numpy()
-    )
-    heatmap_fig.update_traces(
+    discount_fig.update_traces(customdata=heatmap_df[["product_count", "median_sold", "avg_sold_label"]].to_numpy())
+    discount_fig.update_traces(
         hovertemplate=(
             "<b>%{x}</b><br>"
             "Mức giảm giá: %{y}<br>"
@@ -182,26 +170,26 @@ def render_tab(df: pd.DataFrame, filters: dict) -> None:
             "Số sản phẩm: %{customdata[0]:,.0f}<extra></extra>"
         )
     )
-    heatmap_fig.update_layout(
+    discount_fig.update_layout(
         title=dict(text="Giảm giá theo phân khúc", x=0.5, xanchor="center"),
         xaxis=dict(title=None),
         yaxis=dict(title="Biên độ giảm giá"),
         margin=dict(t=48, l=28, r=18, b=72),
         coloraxis_colorbar=dict(title="Lượt mua TB/SP"),
     )
-    style_figure(heatmap_fig, height=330)
-    heatmap_fig.update_layout(title_font=dict(size=15))
-    heatmap_fig.update_xaxes(tickangle=-28, automargin=True)
-    heatmap_fig.update_yaxes(automargin=True)
+    style_figure(discount_fig, height=370)
+    discount_fig.update_layout(title_font=dict(size=15))
+    discount_fig.update_xaxes(tickangle=-28, automargin=True)
+    discount_fig.update_yaxes(automargin=True)
 
     left_col, right_col = st.columns(2, gap="small")
 
     with left_col:
-        st.markdown("<div class='deep-chart'>", unsafe_allow_html=True)
-        st.plotly_chart(bubble_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+        st.markdown(f"<div class='{CHART_WRAPPER_CLASS}'>", unsafe_allow_html=True)
+        st.plotly_chart(sales_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
         st.markdown("</div>", unsafe_allow_html=True)
 
     with right_col:
-        st.markdown("<div class='deep-chart'>", unsafe_allow_html=True)
-        st.plotly_chart(heatmap_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
+        st.markdown(f"<div class='{CHART_WRAPPER_CLASS}'>", unsafe_allow_html=True)
+        st.plotly_chart(discount_fig, use_container_width=True, config={"displayModeBar": False, "responsive": True})
         st.markdown("</div>", unsafe_allow_html=True)
