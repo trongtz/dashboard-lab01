@@ -144,13 +144,20 @@ def inject_styles() -> None:
             }}
 
             .toolbar-row {{
-                margin-bottom: -0.68rem;
+                margin-bottom: -0.82rem;
             }}
 
             .stTabs [data-baseweb="tab-list"] {{
                 gap: 0.35rem;
                 margin-top: -0.5rem;
                 margin-bottom: 0;
+            }}
+
+            .stTabs [data-baseweb="tab-highlight"] {{
+                background: #174A8B !important;
+                height: 0.16rem !important;
+                border-radius: 999px !important;
+                margin-top: 0.12rem !important;
             }}
 
             .stTabs [data-baseweb="tab"] {{
@@ -268,7 +275,7 @@ def _build_category_selector(categories: list[str]) -> list[str]:
 
 
 def render_top_bar(df: pd.DataFrame) -> list[str]:
-    # Top bar giữ title bên trái và bộ lọc danh mục gọn về bên phải.
+    # Top bar giữ title bên trái và bộ lọc danh mục gọn ở góc phải như layout ban đầu.
     st.markdown('<div class="toolbar-row">', unsafe_allow_html=True)
     left_col, spacer_col, cat_col = st.columns([5.2, 4.0, 1.4], gap="small")
 
@@ -306,7 +313,7 @@ def main() -> None:
     }
 
     tab_overview, tab_deep, tab_insights = st.tabs(
-        ["Doanh mục sản phẩm", "Phân khúc giá bán", "Tỉ lệ giảm giá"]
+        ["Danh mục sản phẩm", "Phân khúc giá bán", "Tỉ lệ giảm giá"]
     )
 
     if filtered_df.empty:

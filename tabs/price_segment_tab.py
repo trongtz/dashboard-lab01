@@ -44,7 +44,7 @@ def _build_discount_band(discount_rate: pd.Series) -> pd.Series:
 
 
 def _prepare_segment_summary(df: pd.DataFrame) -> pd.DataFrame:
-    # Tóm tắt quy mô từng phân khúc giá: số sản phẩm, tổng lượt mua và sức mua trung bình.
+    # Tom tat quy mo tung phan khuc gia va luon giu du 7 moc, ke ca khi mot moc khong co du lieu sau loc.
     work_df = df.copy()
     work_df["price_segment"] = _build_price_segment(work_df["price"])
 
@@ -56,11 +56,13 @@ def _prepare_segment_summary(df: pd.DataFrame) -> pd.DataFrame:
             avg_sold=("historical_sold", "mean"),
             median_price=("price", "median"),
         )
-        .reset_index()
+        .reindex(PRICE_SEGMENT_ORDER)
     )
-    summary = summary.dropna(subset=["price_segment"])
-    summary["price_segment"] = pd.Categorical(summary["price_segment"], categories=PRICE_SEGMENT_ORDER, ordered=True)
-    summary = summary.sort_values("price_segment")
+    summary.index.name = "price_segment"
+    summary = summary.reset_index()
+    summary["product_count"] = summary["product_count"].fillna(0)
+    summary["total_sold"] = summary["total_sold"].fillna(0)
+    summary["avg_sold"] = summary["avg_sold"].fillna(0)
     summary["avg_sold_label"] = summary["avg_sold"].map(lambda value: f"{value:,.0f}")
     summary["total_sold_label"] = summary["total_sold"].map(lambda value: f"{value:,.0f}")
     summary["gold_score"] = summary["product_count"].rank(pct=True) * summary["total_sold"].rank(pct=True)
